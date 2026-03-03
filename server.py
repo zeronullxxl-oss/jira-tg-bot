@@ -13,8 +13,8 @@ from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, WEBAPP_URL, HOST, PORT, WEBHOOK_SECRET, STATUS_MAP, JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN
-from database import init_db, add_user, add_task, get_user_tasks, update_task_status
-from templates import TEMPLATES, build_summary, build_description
+from database import init_db, add_user, add_task, get_user_tasks, update_task_status, get_user_profile, save_user_profile
+from templates import TEMPLATES, TEAMS, build_summary, build_description
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
@@ -85,8 +85,39 @@ def validate_init_data(init_data_raw):
         return None
 
 
+async def api_get_profile(request):
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    user = validate_init_data(init_data)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    tg_id = user["id"]
+    await add_user(tg_id, user.get("username"), user.get("first_name"))
+    profile = await get_user_profile(tg_id)
+    if profile and profile.get("buyer_name"):
+        return web.json_response({"registered": True, **profile})
+    return web.json_response({"registered": False, "tg_id": tg_id})
+
+
+async def api_save_profile(request):
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    user = validate_init_data(init_data)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    body = await request.json()
+    buyer_name = body.get("buyer_name", "").strip()
+    office = body.get("office", "").strip()
+    if not buyer_name:
+        return web.json_response({"error": "Name required"}, status=400)
+    await save_user_profile(
+        user["id"], buyer_name, office,
+        user.get("username"), user.get("first_name"),
+    )
+    return web.json_response({"ok": True})
+
+
 async def api_get_templates(request):
-    return web.json_response(TEMPLATES, dumps=lambda x: json.dumps(x, ensure_ascii=False))
+    result = {"teams": TEAMS, "templates": TEMPLATES}
+    return web.json_response(result, dumps=lambda x: json.dumps(x, ensure_ascii=False))
 
 
 async def api_get_tasks(request):
@@ -150,8 +181,15 @@ async def api_create_task(request):
         return web.json_response({"error": "Unknown template"}, status=400)
 
     tg_id = user["id"]
+    profile = await get_user_profile(tg_id)
+    buyer_name = profile.get("buyer_name", "Unknown") if profile else "Unknown"
+    buyer_office = profile.get("office", "") if profile else ""
     summary = build_summary(template_key, data)
     description = build_description(template_key, data)
+    buyer_line = f"Buyer: {buyer_name}"
+    if buyer_office:
+        buyer_line += f" | Office: {buyer_office}"
+    description = buyer_line + "\n" + description
 
     if MOCK_MODE:
         global _mock_counter
@@ -271,6 +309,8 @@ async def main():
 
     app.router.add_get("/", index)
     app.router.add_get("/health", lambda r: web.Response(text="OK"))
+    app.router.add_get("/api/profile", api_get_profile)
+    app.router.add_post("/api/profile", api_save_profile)
     app.router.add_get("/api/templates", api_get_templates)
     app.router.add_get("/api/tasks", api_get_tasks)
     app.router.add_post("/api/tasks", api_create_task)

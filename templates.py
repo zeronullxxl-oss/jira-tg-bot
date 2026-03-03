@@ -1,5 +1,11 @@
+TEAMS = {
+    "tech": {"name": "Тех отдел", "emoji": "\u2699\ufe0f"},
+    "design": {"name": "Диз отдел", "emoji": "\U0001f3a8"},
+}
+
 TEMPLATES = {
     "keitaro_integration": {
+        "team": "tech",
         "name": "Интеграция ленда",
         "description": "Создание / интеграция ленда и преленда",
         "sections": [
@@ -59,6 +65,168 @@ TEMPLATES = {
             },
         ],
     },
+    "design_static": {
+        "team": "design",
+        "name": "Статика (баннер/креатив)",
+        "description": "Статичный креатив для рекламы",
+        "sections": [
+            {
+                "title": "Приоритет и тип",
+                "fields": [
+                    {"key": "vertical", "label": "Вертикаль", "type": "select", "required": True,
+                     "options": ["Инвест", "Чардж"]},
+                    {"key": "priority", "label": "Приоритет", "type": "select", "required": True,
+                     "options": ["Очень срочно", "Стандартная таска"]},
+                ],
+            },
+            {
+                "title": "Основные данные",
+                "fields": [
+                    {"key": "aspect_ratio", "label": "Расширение", "type": "multi_select", "required": True,
+                     "options": ["1:1", "16:9 (горизонтальный)", "9:16 (вертикальный)"]},
+                    {"key": "custom_ratio", "label": "Указать свой формат", "type": "text", "required": False, "placeholder": "если нестандартный"},
+                    {"key": "lang", "label": "Язык", "type": "text", "required": True, "placeholder": "EN, RU, MY..."},
+                    {"key": "currency", "label": "Валюта", "type": "text", "required": False, "placeholder": "USD, MYR..."},
+                    {"key": "geo", "label": "ГЕО", "type": "text", "required": True, "placeholder": "MY, NO, JP..."},
+                ],
+            },
+            {
+                "title": "Крео",
+                "fields": [
+                    {"key": "creo_type", "label": "Тип крео", "type": "select", "required": True,
+                     "options": ["Универсальное без оффера", "С оффером"]},
+                    {"key": "offer_url", "label": "Ссылка на оффер", "type": "text", "required": False, "placeholder": "если с оффером"},
+                ],
+            },
+            {
+                "title": "Логотип оффера на крео",
+                "fields": [
+                    {"key": "logo", "label": "Логотип", "type": "select", "required": True,
+                     "options": ["Да", "Нет", "Оба варианта"]},
+                ],
+            },
+            {
+                "title": "Текст для банера",
+                "fields": [
+                    {"key": "banner_text", "label": "Текст", "type": "textarea", "required": False, "placeholder": "Написать тут..."},
+                ],
+            },
+            {
+                "title": "Персонаж",
+                "fields": [
+                    {"key": "character", "label": "Описание персонажа", "type": "textarea", "required": False, "placeholder": "Какой персонаж нужен для крео..."},
+                ],
+            },
+            {
+                "title": "Количество",
+                "fields": [
+                    {"key": "quantity", "label": "Количество в шт", "type": "text", "required": True, "placeholder": "5"},
+                ],
+            },
+            {
+                "title": "Референсы",
+                "fields": [
+                    {"key": "reference", "label": "Референс", "type": "text", "required": False, "placeholder": "ссылка на похожее"},
+                    {"key": "assets", "label": "Архив", "type": "file", "required": False, "placeholder": "ZIP или картинку"},
+                ],
+            },
+            {
+                "title": "Доп. пожелания",
+                "fields": [
+                    {"key": "extra", "label": "Пожелания", "type": "textarea", "required": False, "placeholder": "Как видишь, от себя дополнения..."},
+                ],
+            },
+        ],
+    },
+    "design_motion": {
+        "team": "design",
+        "name": "Моушен (видео)",
+        "description": "Видео креатив для рекламы",
+        "sections": [
+            {
+                "title": "Приоритет и тип",
+                "fields": [
+                    {"key": "vertical", "label": "Вертикаль", "type": "select", "required": True,
+                     "options": ["Инвест", "Чардж"]},
+                    {"key": "priority", "label": "Приоритет", "type": "select", "required": True,
+                     "options": ["Очень срочно", "Стандартная таска"]},
+                ],
+            },
+            {
+                "title": "Основные данные",
+                "fields": [
+                    {"key": "aspect_ratio", "label": "Расширение", "type": "multi_select", "required": True,
+                     "options": ["1:1", "16:9 (горизонтальный)", "9:16 (вертикальный)"]},
+                    {"key": "custom_ratio", "label": "Указать свой формат", "type": "text", "required": False, "placeholder": "если нестандартный"},
+                    {"key": "lang", "label": "Язык", "type": "text", "required": True, "placeholder": "EN, RU, MY..."},
+                    {"key": "currency", "label": "Валюта", "type": "text", "required": False, "placeholder": "USD, MYR..."},
+                    {"key": "geo", "label": "ГЕО", "type": "text", "required": True, "placeholder": "MY, NO, JP..."},
+                ],
+            },
+            {
+                "title": "Крео",
+                "fields": [
+                    {"key": "creo_type", "label": "Тип крео", "type": "select", "required": True,
+                     "options": ["Универсальное без оффера", "С оффером"]},
+                    {"key": "offer_url", "label": "Ссылка на оффер", "type": "text", "required": False, "placeholder": "если с оффером"},
+                ],
+            },
+            {
+                "title": "Логотип",
+                "fields": [
+                    {"key": "logo", "label": "Логотип", "type": "select", "required": True,
+                     "options": ["Да", "Нет", "Оба варианта"]},
+                ],
+            },
+            {
+                "title": "Озвучка текста",
+                "fields": [
+                    {"key": "voiceover", "label": "Озвучка", "type": "select", "required": True,
+                     "options": ["Да", "Нет", "Оба варианта"]},
+                ],
+            },
+            {
+                "title": "Текст для видео",
+                "fields": [
+                    {"key": "video_text", "label": "Текст для озвучки", "type": "textarea", "required": False, "placeholder": "Прописать текст для озвучки..."},
+                ],
+            },
+            {
+                "title": "Количество",
+                "fields": [
+                    {"key": "quantity", "label": "Количество в шт", "type": "text", "required": True, "placeholder": "5"},
+                ],
+            },
+            {
+                "title": "Субтитры",
+                "fields": [
+                    {"key": "subtitles", "label": "Субтитры", "type": "select", "required": True,
+                     "options": ["Вариант с субтитрами", "Вариант без них", "Оба варианта"]},
+                ],
+            },
+            {
+                "title": "Музыка на фон",
+                "fields": [
+                    {"key": "music", "label": "Музыка", "type": "select", "required": True,
+                     "options": ["Да", "Нет"]},
+                    {"key": "music_notes", "label": "Пожелания по музыке", "type": "text", "required": False, "placeholder": "оставить свои пожелания"},
+                ],
+            },
+            {
+                "title": "Референсы",
+                "fields": [
+                    {"key": "reference", "label": "Референс", "type": "text", "required": False, "placeholder": "ссылка на похожее"},
+                    {"key": "assets", "label": "Архив", "type": "file", "required": False, "placeholder": "ZIP или картинку"},
+                ],
+            },
+            {
+                "title": "Доп. пожелания",
+                "fields": [
+                    {"key": "extra", "label": "Пожелания", "type": "textarea", "required": False, "placeholder": "Как видишь, от себя дополнения..."},
+                ],
+            },
+        ],
+    },
 }
 
 
@@ -71,17 +239,23 @@ def get_all_fields(template_key):
 
 
 def build_summary(template_key, data):
+    tpl = TEMPLATES[template_key]
     geo = data.get("geo", "")
-    offer = data.get("offer_crm", "") or data.get("offer_kt", "")
-    site_type = data.get("site_type", "")
-    if isinstance(site_type, list):
-        site_type = ", ".join(site_type)
-    return f"[{geo}] {site_type} - {offer}"
+    team = tpl.get("team", "")
+    if template_key == "keitaro_integration":
+        offer = data.get("offer_crm", "") or data.get("offer_kt", "")
+        site_type = data.get("site_type", "")
+        if isinstance(site_type, list):
+            site_type = ", ".join(site_type)
+        return f"[{geo}] {site_type} - {offer}"
+    else:
+        vertical = data.get("vertical", "")
+        return f"[{geo}] {tpl['name']} - {vertical}"
 
 
 def build_description(template_key, data):
     tpl = TEMPLATES[template_key]
-    lines = []
+    lines = [f"Team: {tpl.get('team', '')}", f"Template: {tpl['name']}", ""]
     for section in tpl["sections"]:
         title = section["title"]
         lines.append(f"=== {title} ===")
