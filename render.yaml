@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: jira-tg-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: WEBAPP_URL
+        sync: false
+      - key: JIRA_URL
+        value: https://your-domain.atlassian.net
+      - key: JIRA_EMAIL
+        sync: false
+      - key: JIRA_API_TOKEN
+        sync: false
+      - key: JIRA_PROJECT_KEY
+        value: PROJ
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: WEBHOOK_SECRET
+        generateValue: true
