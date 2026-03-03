@@ -15,6 +15,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config import BOT_TOKEN, WEBAPP_URL, HOST, PORT, WEBHOOK_SECRET, STATUS_MAP, JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN
 from database import init_db, add_user, add_task, get_user_tasks, update_task_status, get_user_profile, save_user_profile
 from templates import TEMPLATES, TEAMS, build_summary, build_description
+from telegraph_client import publish_page as telegraph_publish
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
@@ -190,6 +191,18 @@ async def api_create_task(request):
     if buyer_office:
         buyer_line += f" | Office: {buyer_office}"
     description = buyer_line + "\n" + description
+
+    # Auto-publish telegraph text if provided
+    telegraph_text = data.get("telegraph_text", "").strip()
+    if telegraph_text:
+        try:
+            tg_url = await telegraph_publish(summary, telegraph_text)
+            if tg_url:
+                description += f"\n\nTelegraph: {tg_url}"
+                data["telegraph_url"] = tg_url
+                logger.info("Telegraph published: %s", tg_url)
+        except Exception as e:
+            logger.error("Telegraph publish failed: %s", e)
 
     if MOCK_MODE:
         global _mock_counter

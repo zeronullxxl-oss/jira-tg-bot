@@ -52,7 +52,7 @@ TEMPLATES = {
                     {"key": "reference", "label": "Референс", "type": "text", "required": False, "placeholder": "ссылка на референс"},
                     {"key": "figma_url", "label": "Figma / дизайн", "type": "text", "required": False, "placeholder": "ссылка на макет"},
                     {"key": "assets", "label": "Архив ассетов", "type": "file", "required": False, "placeholder": "ZIP или ссылка"},
-                    {"key": "telegraph", "label": "Телеграф", "type": "text", "required": False, "placeholder": "ссылка на telegraph"},
+                    {"key": "telegraph_text", "label": "Телеграф", "type": "textarea", "required": False, "placeholder": "Напиши текст — опубликуется на telegra.ph автоматом"},
                 ],
             },
             {

@@ -114,8 +114,8 @@ function Registration({onDone}){
     <p>Зарегистрируйся чтобы начать</p>
     <div className="reg-form">
       <div className="field-group">
-        <div className="field-label">Твоё имя / ник<span className="field-required">*</span></div>
-        <input type="text" placeholder="Как тебя знают в команде" value={name} onChange={e=>setName(e.target.value)}/>
+        <div className="field-label">Ник<span className="field-required">*</span></div>
+        <input type="text" placeholder="Твой ник в команде" value={name} onChange={e=>setName(e.target.value)}/>
       </div>
       <button className="btn btn-primary" disabled={!name.trim()||saving} onClick={submit}>
         {saving?<><span className="spinner"/>Сохраняю...</>:"Поехали!"}
