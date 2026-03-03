@@ -7,16 +7,65 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700&display=swap');
-  :root{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;--card:#16161f;--border:#2a2a3a;--text:#e4e4ed;--text2:#8888a0;--accent:#6c5ce7;--accent2:#a29bfe;--green:#00b894;--orange:#e17055;--red:#ff6b6b;--radius:12px;}
+
+  /* ── Theme: Midnight Purple (default) ──── */
+  [data-theme="purple"]{
+    --bg:#0d0b1a;--bg2:#151226;--bg3:#1e1a33;--card:#171330;
+    --border:#2d2654;--text:#e8e4f5;--text2:#8b82b0;
+    --accent:#8b5cf6;--accent2:#c4b5fd;--green:#34d399;
+    --orange:#f97316;--red:#f87171;--radius:12px;
+    --header-bg:#0d0b1a;
+  }
+
+  /* ── Theme: Arctic Light ───────────────── */
+  [data-theme="light"]{
+    --bg:#f4f4f8;--bg2:#ffffff;--bg3:#eeeef2;--card:#ffffff;
+    --border:#d8d8e4;--text:#1a1a2e;--text2:#6b6b8a;
+    --accent:#6c5ce7;--accent2:#4834d4;--green:#00b894;
+    --orange:#e17055;--red:#d63031;--radius:12px;
+    --header-bg:#f4f4f8;
+  }
+
+  /* ── Theme: Cyber Noir ─────────────────── */
+  [data-theme="cyber"]{
+    --bg:#0a0a0a;--bg2:#111111;--bg3:#1a1a1a;--card:#141414;
+    --border:#2a2a2a;--text:#e0ffe0;--text2:#5a8a5a;
+    --accent:#00ff87;--accent2:#00cc6a;--green:#00ff87;
+    --orange:#ffaa00;--red:#ff4444;--radius:12px;
+    --header-bg:#0a0a0a;
+  }
+  [data-theme="cyber"] .tab.active{box-shadow:0 2px 16px rgba(0,255,135,.25);}
+  [data-theme="cyber"] .btn-primary{box-shadow:0 4px 20px rgba(0,255,135,.2);}
+  [data-theme="cyber"] .task-key{color:var(--accent);}
+  [data-theme="cyber"] .chip.active{background:var(--accent);color:#000;border-color:var(--accent);}
+  [data-theme="cyber"] .chip.multi.active{background:transparent;color:var(--accent);border-color:var(--accent);}
+  [data-theme="cyber"] .chip.multi.active::before{color:var(--accent);}
+  [data-theme="cyber"] .header h1{background:linear-gradient(90deg,#00ff87,#00cc6a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  [data-theme="cyber"] .mock-badge{background:var(--accent);color:#000;}
+
+  [data-theme="light"] .tab.active{box-shadow:0 2px 12px rgba(108,92,231,.3);}
+  [data-theme="light"] .btn-primary{box-shadow:0 4px 16px rgba(108,92,231,.2);}
+  [data-theme="light"] .task-card{box-shadow:0 1px 4px rgba(0,0,0,.06);}
+
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s;}
   .app{max-width:480px;margin:0 auto;padding:0 16px 100px;}
-  .header{padding:20px 0 16px;position:sticky;top:0;background:var(--bg);z-index:100;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .header{padding:20px 0 16px;position:sticky;top:0;background:var(--header-bg);z-index:100;border-bottom:1px solid var(--border);margin-bottom:16px;transition:background .3s;}
+  .header-row{display:flex;align-items:center;justify-content:space-between;}
   .header h1{font-size:18px;font-weight:700;letter-spacing:-0.3px;}
   .header-sub{font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace;margin-top:4px;}
   .mock-badge{display:inline-block;background:var(--orange);color:#000;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:8px;text-transform:uppercase;vertical-align:middle;}
-  .buyer-badge{display:inline-block;background:var(--accent);color:white;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;}
-  .tabs{display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:4px;margin-bottom:20px;}
+
+  /* Theme switcher */
+  .theme-switch{display:flex;gap:6px;}
+  .theme-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .2s;position:relative;}
+  .theme-dot.active{border-color:var(--accent);transform:scale(1.15);}
+  .theme-dot[data-t="purple"]{background:linear-gradient(135deg,#8b5cf6,#0d0b1a);}
+  .theme-dot[data-t="light"]{background:linear-gradient(135deg,#f4f4f8,#d8d8e4);border:2px solid #ccc;}
+  .theme-dot[data-t="light"].active{border-color:#6c5ce7;}
+  .theme-dot[data-t="cyber"]{background:linear-gradient(135deg,#00ff87,#0a0a0a);}
+
+  .tabs{display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:4px;margin-bottom:20px;transition:background .3s;}
   .tab{flex:1;padding:10px 16px;text-align:center;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all .2s;color:var(--text2);border:none;background:transparent;font-family:inherit;}
   .tab.active{background:var(--accent);color:white;box-shadow:0 2px 12px rgba(108,92,231,.4);}
   .status-group{margin-bottom:20px;}
@@ -28,7 +77,7 @@
   .task-card:active{transform:scale(.98);background:var(--bg3);}
   .task-key{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);font-weight:600;margin-bottom:4px;}
   .task-summary{font-size:14px;font-weight:500;line-height:1.4;margin-bottom:8px;}
-  .task-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;}
+  .task-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap;}
   .task-status-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
   .task-actions{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;}
   .task-action-btn{font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:'JetBrains Mono',monospace;}
@@ -40,7 +89,7 @@
   .field-group{margin-bottom:16px;}
   .field-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;display:flex;align-items:center;gap:4px;}
   .field-required{color:var(--red);font-size:14px;line-height:1;}
-  input[type="text"],textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--text);font-family:'Manrope',sans-serif;outline:none;transition:border-color .2s;-webkit-appearance:none;}
+  input[type="text"],textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--text);font-family:'Manrope',sans-serif;outline:none;transition:border-color .2s,background .3s;-webkit-appearance:none;}
   input:focus,textarea:focus{border-color:var(--accent);}
   textarea{min-height:80px;resize:vertical;}
   .chip-wrap{display:flex;gap:6px;flex-wrap:wrap;}
@@ -96,7 +145,30 @@ async function api(method,path,body=null){
   return(await fetch(path,opts)).json();
 }
 const ALL_STATUSES=["To Do","Ready for Development","In Progress","In Review","Done"];
-const OFFICES=[];
+
+const THEMES=[
+  {id:"purple",label:"Midnight Purple",headerBg:"#0d0b1a"},
+  {id:"light",label:"Arctic Light",headerBg:"#f4f4f8"},
+  {id:"cyber",label:"Cyber Noir",headerBg:"#0a0a0a"},
+];
+
+function useTheme(){
+  const[theme,setTheme]=useState(()=>localStorage.getItem("theme")||"purple");
+  useEffect(()=>{
+    document.documentElement.setAttribute("data-theme",theme);
+    localStorage.setItem("theme",theme);
+    const t=THEMES.find(x=>x.id===theme);
+    if(isTG&&t){try{tg.setHeaderColor(t.headerBg);tg.setBackgroundColor(t.headerBg);}catch(e){}}
+  },[theme]);
+  return[theme,setTheme];
+}
+
+function ThemeSwitch({current,onChange}){
+  return<div className="theme-switch">
+    {THEMES.map(t=><div key={t.id} className={`theme-dot ${current===t.id?'active':''}`} data-t={t.id}
+      title={t.label} onClick={()=>onChange(t.id)}/>)}
+  </div>;
+}
 
 /* ── Registration ──────────────────────────── */
 function Registration({onDone}){
@@ -212,6 +284,7 @@ function CreateTask({teams,templates,onCreated}){
 
 /* ── App ───────────────────────────────────── */
 function App(){
+  const[theme,setTheme]=useTheme();
   const[profile,setProfile]=useState(null);
   const[loading,setLoading]=useState(true);
   const[tab,setTab]=useState("tasks");
@@ -225,13 +298,11 @@ function App(){
   const changeStatus=async(jk,s)=>{await api("POST","/api/tasks/status",{jira_key:jk,status:s});loadTasks();};
 
   useEffect(()=>{
-    if(isTG){tg.ready();tg.expand();tg.setHeaderColor('#0a0a0f');tg.setBackgroundColor('#0a0a0f');}
-    // Load profile
+    if(isTG){tg.ready();tg.expand();}
     api("GET","/api/profile").then(d=>{
       if(d.registered){setProfile(d);}
       setLoading(false);
     }).catch(()=>setLoading(false));
-    // Load data
     loadTasks();
     api("GET","/api/templates").then(d=>{if(d&&!d.error){setTeams(d.teams||{});setTemplates(d.templates||{});}});
     fetch("/api/tasks/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})}).then(r=>{if(r.status!==403)setMockMode(true);});
@@ -243,7 +314,10 @@ function App(){
 
   return<div className="app">
     <div className="header">
-      <h1>Task Manager 13Buyers{mockMode&&<span className="mock-badge">dev</span>}</h1>
+      <div className="header-row">
+        <h1>Task Manager 13Buyers{mockMode&&<span className="mock-badge">dev</span>}</h1>
+        <ThemeSwitch current={theme} onChange={setTheme}/>
+      </div>
       <div className="header-sub">{profile.buyer_name} {profile.buyer_tag&&<span style={{color:'var(--accent2)'}}>{profile.buyer_tag}</span>} // {tasks.length} tasks</div>
     </div>
     <div className="tabs">
