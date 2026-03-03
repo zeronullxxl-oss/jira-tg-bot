@@ -4,7 +4,6 @@ import hmac
 import json
 import logging
 import os
-import uuid
 from aiohttp import web
 
 from aiogram import Bot, Dispatcher
@@ -13,7 +12,7 @@ from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, WEBAPP_URL, HOST, PORT, WEBHOOK_SECRET, STATUS_MAP, JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN
-from database import init_db, add_user, add_task, get_user_tasks, update_task_status, get_user_profile, save_user_profile
+from database import init_db, add_user, get_user_profile, save_user_profile
 from templates import TEMPLATES, TEAMS, build_summary, build_description
 from telegraph_client import publish_page as telegraph_publish
 
@@ -23,7 +22,7 @@ logger = logging.getLogger("server")
 # ── Mock mode: if Jira creds are empty, skip Jira calls ─────────────
 MOCK_MODE = not JIRA_URL or not JIRA_API_TOKEN or JIRA_URL == "https://your-domain.atlassian.net"
 if MOCK_MODE:
-    logger.warning("=== MOCK MODE: Jira disabled, tasks saved locally ===")
+    logger.warning("=== MOCK MODE: Jira disabled ===")
 
 bot = None
 dp = None
@@ -48,12 +47,11 @@ else:
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Counter for mock issue keys
 _mock_counter = 0
+_mock_tasks = []  # in-memory mock storage for dev mode
 
 
 def validate_init_data(init_data_raw):
-    """Validate TG initData. In mock mode without bot, allow dev user."""
     if not init_data_raw and not BOT_ENABLED:
         return {"id": 12345678, "first_name": "Dev", "username": "dev"}
     if not init_data_raw:
@@ -94,7 +92,7 @@ async def api_get_profile(request):
     tg_id = user["id"]
     await add_user(tg_id, user.get("username"), user.get("first_name"))
     profile = await get_user_profile(tg_id)
-    if profile and profile.get("buyer_name"):
+    if profile and profile.get("buyer_name") and profile.get("buyer_tag"):
         return web.json_response({"registered": True, **profile})
     return web.json_response({"registered": False, "tg_id": tg_id})
 
@@ -106,11 +104,11 @@ async def api_save_profile(request):
         return web.json_response({"error": "Unauthorized"}, status=401)
     body = await request.json()
     buyer_name = body.get("buyer_name", "").strip()
-    office = body.get("office", "").strip()
-    if not buyer_name:
-        return web.json_response({"error": "Name required"}, status=400)
+    buyer_tag = body.get("buyer_tag", "").strip()
+    if not buyer_name or not buyer_tag:
+        return web.json_response({"error": "Name and Buyer Tag required"}, status=400)
     await save_user_profile(
-        user["id"], buyer_name, office,
+        user["id"], buyer_name, buyer_tag,
         user.get("username"), user.get("first_name"),
     )
     return web.json_response({"ok": True})
@@ -122,24 +120,52 @@ async def api_get_templates(request):
 
 
 async def api_get_tasks(request):
+    """Fetch tasks from Jira by Buyer Tag. Mock mode uses in-memory list."""
     init_data = request.headers.get("X-Telegram-Init-Data", "")
     user = validate_init_data(init_data)
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
     tg_id = user["id"]
-    tasks = await get_user_tasks(tg_id)
-    result = []
-    for t in tasks:
-        si = STATUS_MAP.get(t["status"], {"label": t["status"], "color": "#6b7280", "order": 99})
-        jira_url = f"{JIRA_URL}/browse/{t['jira_key']}" if not MOCK_MODE else "#"
-        result.append({
-            "jira_key": t["jira_key"], "summary": t["summary"],
-            "status": t["status"], "status_label": si["label"],
-            "status_color": si["color"], "status_order": si["order"],
-            "template": t["template"], "created_at": t["created_at"],
-            "jira_url": jira_url,
-        })
-    return web.json_response(result)
+    profile = await get_user_profile(tg_id)
+    buyer_tag = profile.get("buyer_tag", "") if profile else ""
+
+    if MOCK_MODE:
+        result = []
+        for t in _mock_tasks:
+            if t["tg_id"] == tg_id:
+                si = STATUS_MAP.get(t["status"], {"label": t["status"], "color": "#6b7280", "order": 99})
+                result.append({
+                    "jira_key": t["jira_key"], "summary": t["summary"],
+                    "status": t["status"], "status_label": si["label"],
+                    "status_color": si["color"], "status_order": si["order"],
+                    "created_at": t["created_at"], "jira_url": "#",
+                })
+        return web.json_response(result)
+
+    if not buyer_tag:
+        return web.json_response([])
+
+    try:
+        from jira_client import jira
+        issues = await jira.get_issues_by_buyer_tag(buyer_tag)
+        result = []
+        for issue in issues:
+            status_name = issue["status"]
+            si = STATUS_MAP.get(status_name, {"label": status_name, "color": "#6b7280", "order": 99})
+            result.append({
+                "jira_key": issue["jira_key"],
+                "summary": issue["summary"],
+                "status": status_name,
+                "status_label": si["label"],
+                "status_color": si["color"],
+                "status_order": si["order"],
+                "created_at": issue["created_at"],
+                "jira_url": issue["jira_url"],
+            })
+        return web.json_response(result)
+    except Exception as e:
+        logger.error("Jira fetch error: %s", e)
+        return web.json_response({"error": str(e)}, status=500)
 
 
 async def api_create_task(request):
@@ -184,13 +210,10 @@ async def api_create_task(request):
     tg_id = user["id"]
     profile = await get_user_profile(tg_id)
     buyer_name = profile.get("buyer_name", "Unknown") if profile else "Unknown"
-    buyer_office = profile.get("office", "") if profile else ""
+    buyer_tag = profile.get("buyer_tag", "") if profile else ""
     summary = build_summary(template_key, data)
     description = build_description(template_key, data)
-    buyer_line = f"Buyer: {buyer_name}"
-    if buyer_office:
-        buyer_line += f" | Office: {buyer_office}"
-    description = buyer_line + "\n" + description
+    description = f"Buyer: {buyer_name} ({buyer_tag})\n{description}"
 
     # Auto-publish telegraph text if provided
     telegraph_text = data.get("telegraph_text", "").strip()
@@ -199,7 +222,6 @@ async def api_create_task(request):
             tg_url = await telegraph_publish(summary, telegraph_text)
             if tg_url:
                 description += f"\n\nTelegraph: {tg_url}"
-                data["telegraph_url"] = tg_url
                 logger.info("Telegraph published: %s", tg_url)
         except Exception as e:
             logger.error("Telegraph publish failed: %s", e)
@@ -208,12 +230,13 @@ async def api_create_task(request):
         global _mock_counter
         _mock_counter += 1
         jira_key = f"MOCK-{_mock_counter}"
-        await add_task(tg_id, jira_key, template_key, summary)
-        logger.info("MOCK task created: %s - %s", jira_key, summary)
+        from datetime import datetime
+        _mock_tasks.append({
+            "tg_id": tg_id, "jira_key": jira_key, "summary": summary,
+            "status": "To Do", "created_at": datetime.now().isoformat(),
+        })
+        logger.info("MOCK task: %s - %s", jira_key, summary)
         logger.info("Description:\n%s", description)
-        if uploaded_files:
-            for fpath, fname in uploaded_files:
-                logger.info("File attached: %s (%s)", fname, fpath)
         return web.json_response({
             "ok": True, "jira_key": jira_key,
             "summary": summary, "jira_url": "#",
@@ -223,10 +246,9 @@ async def api_create_task(request):
             from jira_client import jira
             result = await jira.create_issue(
                 summary=summary, description=description,
-                labels=[f"tg_{tg_id}", "bot-created"],
+                labels=["bot-created"], buyer_tag=buyer_tag,
             )
             jira_key = result["key"]
-            await add_task(tg_id, jira_key, template_key, summary)
 
             for fpath, fname in uploaded_files:
                 try:
@@ -266,7 +288,7 @@ async def api_get_statuses(request):
 
 
 async def api_update_status(request):
-    """Manual status update for testing in mock mode."""
+    """Manual status update for mock mode only."""
     if not MOCK_MODE:
         return web.json_response({"error": "Only in mock mode"}, status=403)
     body = await request.json()
@@ -274,11 +296,15 @@ async def api_update_status(request):
     new_status = body.get("status")
     if not jira_key or not new_status:
         return web.json_response({"error": "Missing jira_key or status"}, status=400)
-    tg_id = await update_task_status(jira_key, new_status)
-    return web.json_response({"ok": True, "tg_id": tg_id})
+    for t in _mock_tasks:
+        if t["jira_key"] == jira_key:
+            t["status"] = new_status
+            break
+    return web.json_response({"ok": True})
 
 
 async def jira_webhook(request):
+    """Jira webhook — notify buyer about status change."""
     secret = request.query.get("secret", "")
     if secret != WEBHOOK_SECRET:
         return web.Response(status=403)
@@ -292,21 +318,34 @@ async def jira_webhook(request):
     jira_key = issue.get("key")
     if not jira_key:
         return web.Response(status=200)
+
+    # Extract tg_id from labels
+    labels = issue.get("fields", {}).get("labels", [])
+    tg_id = None
+    for lbl in labels:
+        if lbl.startswith("tg_"):
+            try:
+                tg_id = int(lbl[3:])
+            except ValueError:
+                pass
+            break
+
+    if not tg_id or not bot:
+        return web.Response(status=200)
+
     changelog = payload.get("changelog", {})
     for item in changelog.get("items", []):
         if item.get("field") == "status":
             new_status = item.get("toString")
             old_status = item.get("fromString")
-            tg_id = await update_task_status(jira_key, new_status)
-            if tg_id and bot:
-                old_info = STATUS_MAP.get(old_status, {"label": old_status})
-                new_info = STATUS_MAP.get(new_status, {"label": new_status})
-                summary = issue.get("fields", {}).get("summary", "")
-                try:
-                    text = f"Task updated!\n\n{jira_key}\n{summary}\n\n{old_info['label']} -> {new_info['label']}"
-                    await bot.send_message(tg_id, text)
-                except Exception as e:
-                    logger.error("Notify failed %s: %s", tg_id, e)
+            old_info = STATUS_MAP.get(old_status, {"label": old_status})
+            new_info = STATUS_MAP.get(new_status, {"label": new_status})
+            summary = issue.get("fields", {}).get("summary", "")
+            try:
+                text = f"Task updated!\n\n{jira_key}\n{summary}\n\n{old_info['label']} -> {new_info['label']}"
+                await bot.send_message(tg_id, text)
+            except Exception as e:
+                logger.error("Notify failed %s: %s", tg_id, e)
             break
     return web.Response(status=200)
 
@@ -350,7 +389,6 @@ async def main():
             await runner.cleanup()
             await bot.session.close()
     else:
-        # No bot - just run web server
         try:
             while True:
                 await asyncio.sleep(3600)

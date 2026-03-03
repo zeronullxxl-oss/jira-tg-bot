@@ -101,12 +101,13 @@ const OFFICES=[];
 /* ── Registration ──────────────────────────── */
 function Registration({onDone}){
   const[name,setName]=useState("");
+  const[tag,setTag]=useState("");
   const[saving,setSaving]=useState(false);
   const submit=async()=>{
-    if(!name.trim())return;
+    if(!name.trim()||!tag.trim())return;
     setSaving(true);
-    const res=await api("POST","/api/profile",{buyer_name:name.trim(),office:""});
-    if(res.ok)onDone({buyer_name:name.trim()});
+    const res=await api("POST","/api/profile",{buyer_name:name.trim(),buyer_tag:tag.trim()});
+    if(res.ok)onDone({buyer_name:name.trim(),buyer_tag:tag.trim()});
     setSaving(false);
   };
   return<div className="reg-wrap fade-in">
@@ -117,7 +118,11 @@ function Registration({onDone}){
         <div className="field-label">Ник<span className="field-required">*</span></div>
         <input type="text" placeholder="Твой ник в команде" value={name} onChange={e=>setName(e.target.value)}/>
       </div>
-      <button className="btn btn-primary" disabled={!name.trim()||saving} onClick={submit}>
+      <div className="field-group">
+        <div className="field-label">Buyer Tag (как в Jira)<span className="field-required">*</span></div>
+        <input type="text" placeholder="@pumba_junior" value={tag} onChange={e=>setTag(e.target.value)}/>
+      </div>
+      <button className="btn btn-primary" disabled={!name.trim()||!tag.trim()||saving} onClick={submit}>
         {saving?<><span className="spinner"/>Сохраняю...</>:"Поехали!"}
       </button>
     </div>
@@ -239,7 +244,7 @@ function App(){
   return<div className="app">
     <div className="header">
       <h1>Task Manager 13Buyers{mockMode&&<span className="mock-badge">dev</span>}</h1>
-      <div className="header-sub">{profile.buyer_name} // {tasks.length} tasks</div>
+      <div className="header-sub">{profile.buyer_name} {profile.buyer_tag&&<span style={{color:'var(--accent2)'}}>{profile.buyer_tag}</span>} // {tasks.length} tasks</div>
     </div>
     <div className="tabs">
       <button className={`tab ${tab==='tasks'?'active':''}`} onClick={()=>{setTab('tasks');loadTasks();}}>Мои таски</button>

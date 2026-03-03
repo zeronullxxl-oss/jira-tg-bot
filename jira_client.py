@@ -1,57 +1,94 @@
 import aiohttp
+import json
+import logging
+
 from config import JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY
+
+logger = logging.getLogger("jira")
+
+BUYER_TAG_FIELD = "customfield_10059"
 
 
 class JiraClient:
     def __init__(self):
-        self.base_url = f"{JIRA_URL}/rest/api/3"
+        self.base = JIRA_URL.rstrip("/")
         self.auth = aiohttp.BasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
-        self.headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
-    async def _request(self, method, endpoint, json_data=None):
-        url = f"{self.base_url}{endpoint}"
-        async with aiohttp.ClientSession(auth=self.auth, headers=self.headers) as session:
-            async with session.request(method, url, json=json_data) as resp:
-                if resp.status >= 400:
-                    text = await resp.text()
-                    raise Exception(f"Jira {resp.status}: {text}")
-                if resp.status == 204:
-                    return {}
-                return await resp.json()
-
-    async def create_issue(self, summary, description, labels=None, priority=None):
+    async def create_issue(self, summary, description, labels=None, buyer_tag=None):
+        url = f"{self.base}/rest/api/3/issue"
+        # Build ADF description
+        adf_content = []
+        for line in description.split("\n"):
+            adf_content.append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": line}] if line.strip() else [],
+            })
         fields = {
             "project": {"key": JIRA_PROJECT_KEY},
             "summary": summary,
+            "issuetype": {"name": "Story"},
             "description": {
-                "type": "doc",
                 "version": 1,
-                "content": [{"type": "paragraph", "content": [{"type": "text", "text": description}]}],
+                "type": "doc",
+                "content": adf_content,
             },
-            "issuetype": {"name": "Task"},
         }
         if labels:
             fields["labels"] = labels
-        if priority:
-            fields["priority"] = {"name": priority}
-        return await self._request("POST", "/issue", {"fields": fields})
+        if buyer_tag:
+            fields[BUYER_TAG_FIELD] = {"value": buyer_tag}
+        async with aiohttp.ClientSession(auth=self.auth) as session:
+            async with session.post(
+                url,
+                headers={"Content-Type": "application/json"},
+                json={"fields": fields},
+            ) as resp:
+                data = await resp.json()
+                if resp.status >= 400:
+                    logger.error("Create issue error %s: %s", resp.status, data)
+                    raise Exception(f"Jira error: {data}")
+                return data
 
-    async def get_issues_by_label(self, label):
-        jql = f'project = {JIRA_PROJECT_KEY} AND labels = "{label}" ORDER BY created DESC'
-        result = await self._request(
-            "GET", f"/search?jql={jql}&maxResults=50&fields=summary,status,priority,created,updated"
-        )
-        return result.get("issues", [])
+    async def get_issues_by_buyer_tag(self, buyer_tag):
+        """Fetch all issues with given Buyer Tag value."""
+        url = f"{self.base}/rest/api/3/search"
+        jql = f'project = {JIRA_PROJECT_KEY} AND cf[10059] = "{buyer_tag}" ORDER BY created DESC'
+        params = {
+            "jql": jql,
+            "maxResults": 50,
+            "fields": "summary,status,created,priority",
+        }
+        async with aiohttp.ClientSession(auth=self.auth) as session:
+            async with session.get(url, headers={"Accept": "application/json"}, params=params, auth=self.auth) as resp:
+                data = await resp.json()
+                if resp.status >= 400:
+                    logger.error("Search error %s: %s", resp.status, data)
+                    return []
+                issues = []
+                for item in data.get("issues", []):
+                    fields = item.get("fields", {})
+                    status_name = fields.get("status", {}).get("name", "To Do")
+                    status_cat = fields.get("status", {}).get("statusCategory", {}).get("key", "new")
+                    issues.append({
+                        "jira_key": item["key"],
+                        "summary": fields.get("summary", ""),
+                        "status": status_name,
+                        "status_category": status_cat,
+                        "created_at": fields.get("created", ""),
+                        "jira_url": f"{self.base}/browse/{item['key']}",
+                    })
+                return issues
 
-    async def get_issue(self, key):
-        return await self._request("GET", f"/issue/{key}")
-
-    async def test_connection(self):
-        try:
-            await self._request("GET", "/myself")
-            return True
-        except Exception:
-            return False
+    async def attach_file(self, issue_key, filepath, filename):
+        url = f"{self.base}/rest/api/3/issue/{issue_key}/attachments"
+        headers = {"X-Atlassian-Token": "no-check"}
+        data = aiohttp.FormData()
+        data.add_field("file", open(filepath, "rb"), filename=filename)
+        async with aiohttp.ClientSession(auth=self.auth) as session:
+            async with session.post(url, headers=headers, data=data) as resp:
+                if resp.status >= 400:
+                    text = await resp.text()
+                    logger.error("Attach error %s: %s", resp.status, text)
 
 
 jira = JiraClient()
