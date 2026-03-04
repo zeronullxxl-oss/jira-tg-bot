@@ -59,9 +59,11 @@ class JiraClient:
             "maxResults": 50,
             "fields": ["summary", "status", "created", "priority", "project"],
         }
+        logger.info("Jira search JQL: %s", jql)
         async with aiohttp.ClientSession(auth=self.auth) as session:
             async with session.post(url, headers={"Content-Type": "application/json", "Accept": "application/json"}, json=payload) as resp:
                 data = await resp.json()
+                logger.info("Jira search response status=%s total=%s", resp.status, data.get("total", "N/A"))
                 if resp.status >= 400:
                     logger.error("Search error %s: %s", resp.status, data)
                     return []

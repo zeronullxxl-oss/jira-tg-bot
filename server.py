@@ -143,8 +143,10 @@ async def api_get_tasks(request):
         return web.json_response(result)
 
     if not buyer_tag:
+        logger.warning("No buyer_tag for tg_id=%s", tg_id)
         return web.json_response([])
 
+    logger.info("Fetching tasks for buyer_tag='%s' tg_id=%s", buyer_tag, tg_id)
     try:
         from jira_client import jira
         issues = await jira.get_issues_by_buyer_tag(buyer_tag)
