@@ -53,7 +53,7 @@ class JiraClient:
         """Fetch all issues with given Buyer Tag value across all projects."""
         url = f"{self.base}/rest/api/3/search/jql"
         projects = ", ".join([f'"{k}"' for k in JIRA_PROJECT_KEYS])
-        jql = f'project in ({projects}) AND cf[10059] = "{buyer_tag}" ORDER BY created DESC'
+        jql = f'project in ({projects}) AND "Buyer Tag" = "{buyer_tag}" ORDER BY created DESC'
         params = {
             "jql": jql,
             "maxResults": 50,
@@ -63,7 +63,7 @@ class JiraClient:
         async with aiohttp.ClientSession(auth=self.auth) as session:
             async with session.get(url, headers={"Accept": "application/json"}, params=params) as resp:
                 data = await resp.json()
-                logger.info("Jira search response status=%s total=%s keys=%s", resp.status, data.get("total", "N/A"), list(data.keys()))
+                logger.info("Jira search response status=%s total=%s keys=%s raw=%s", resp.status, data.get("total", "N/A"), list(data.keys()), str(data)[:300])
                 if resp.status >= 400:
                     logger.error("Search error %s: %s", resp.status, data)
                     return []
