@@ -51,16 +51,16 @@ class JiraClient:
 
     async def get_issues_by_buyer_tag(self, buyer_tag):
         """Fetch all issues with given Buyer Tag value across all projects."""
-        url = f"{self.base}/rest/api/3/search"
+        url = f"{self.base}/rest/api/3/search/jql"
         projects = ", ".join([f'"{k}"' for k in JIRA_PROJECT_KEYS])
         jql = f'project in ({projects}) AND cf[10059] = "{buyer_tag}" ORDER BY created DESC'
-        params = {
+        payload = {
             "jql": jql,
             "maxResults": 50,
-            "fields": "summary,status,created,priority,project",
+            "fields": ["summary", "status", "created", "priority", "project"],
         }
         async with aiohttp.ClientSession(auth=self.auth) as session:
-            async with session.get(url, headers={"Accept": "application/json"}, params=params, auth=self.auth) as resp:
+            async with session.post(url, headers={"Content-Type": "application/json", "Accept": "application/json"}, json=payload) as resp:
                 data = await resp.json()
                 if resp.status >= 400:
                     logger.error("Search error %s: %s", resp.status, data)
