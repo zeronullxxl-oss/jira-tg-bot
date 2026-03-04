@@ -2,7 +2,7 @@ import aiohttp
 import json
 import logging
 
-from config import JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY
+from config import JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY, JIRA_PROJECT_KEYS
 
 logger = logging.getLogger("jira")
 
@@ -50,13 +50,14 @@ class JiraClient:
                 return data
 
     async def get_issues_by_buyer_tag(self, buyer_tag):
-        """Fetch all issues with given Buyer Tag value."""
+        """Fetch all issues with given Buyer Tag value across all projects."""
         url = f"{self.base}/rest/api/3/search"
-        jql = f'project = {JIRA_PROJECT_KEY} AND cf[10059] = "{buyer_tag}" ORDER BY created DESC'
+        projects = ", ".join([f'"{k}"' for k in JIRA_PROJECT_KEYS])
+        jql = f'project in ({projects}) AND cf[10059] = "{buyer_tag}" ORDER BY created DESC'
         params = {
             "jql": jql,
             "maxResults": 50,
-            "fields": "summary,status,created,priority",
+            "fields": "summary,status,created,priority,project",
         }
         async with aiohttp.ClientSession(auth=self.auth) as session:
             async with session.get(url, headers={"Accept": "application/json"}, params=params, auth=self.auth) as resp:
@@ -69,11 +70,15 @@ class JiraClient:
                     fields = item.get("fields", {})
                     status_name = fields.get("status", {}).get("name", "To Do")
                     status_cat = fields.get("status", {}).get("statusCategory", {}).get("key", "new")
+                    project_key = fields.get("project", {}).get("key", "")
+                    priority_name = fields.get("priority", {}).get("name", "")
                     issues.append({
                         "jira_key": item["key"],
                         "summary": fields.get("summary", ""),
                         "status": status_name,
                         "status_category": status_cat,
+                        "project": project_key,
+                        "priority": priority_name,
                         "created_at": fields.get("created", ""),
                         "jira_url": f"{self.base}/browse/{item['key']}",
                     })

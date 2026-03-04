@@ -159,6 +159,8 @@ async def api_get_tasks(request):
                 "status_label": si["label"],
                 "status_color": si["color"],
                 "status_order": si["order"],
+                "project": issue.get("project", ""),
+                "priority": issue.get("priority", ""),
                 "created_at": issue["created_at"],
                 "jira_url": issue["jira_url"],
             })

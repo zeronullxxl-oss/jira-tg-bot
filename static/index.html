@@ -206,7 +206,7 @@ function TaskList({tasks,loading,onStatusChange,mockMode}){
         <div className="task-card" key={t.jira_key} onClick={()=>{if(isTG&&t.jira_url!=='#')tg.openLink(t.jira_url);}}>
           <div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:t.status_color}}/>
           <div className="task-key">{t.jira_key}</div><div className="task-summary">{t.summary}</div>
-          <div className="task-meta"><span className="task-status-badge" style={{background:t.status_color+'20',color:t.status_color}}>{t.status_label}</span><span>{new Date(t.created_at).toLocaleDateString()}</span></div>
+          <div className="task-meta"><span className="task-status-badge" style={{background:t.status_color+'20',color:t.status_color}}>{t.status_label}</span>{t.project&&<span style={{background:'var(--bg3)',padding:'2px 6px',borderRadius:4,fontSize:10}}>{t.project}</span>}{t.priority&&<span style={{fontSize:10,color:'var(--text2)'}}>{t.priority}</span>}<span>{new Date(t.created_at).toLocaleDateString()}</span></div>
           {mockMode&&<div className="task-actions">{ALL_STATUSES.filter(s=>s!==t.status).map(s=><button key={s} className="task-action-btn" onClick={e=>{e.stopPropagation();onStatusChange(t.jira_key,s);}}>{s}</button>)}</div>}
         </div>)}
     </div>)}</div>;
@@ -241,7 +241,7 @@ function CreateTask({teams,templates,onCreated}){
   const teamTemplates=team?Object.entries(templates).filter(([k,v])=>v.team===team):[];
   const handleChange=(key,val)=>setFormData(p=>({...p,[key]:val}));
   const handleMultiToggle=(key,opt)=>{setFormData(p=>{const arr=Array.isArray(p[key])?[...p[key]]:[];const idx=arr.indexOf(opt);if(idx>=0)arr.splice(idx,1);else arr.push(opt);return{...p,[key]:arr};});};
-  const canSubmit=()=>{if(!tpl)return false;for(const sec of tpl.sections){for(const f of sec.fields){if(!f.required)continue;const v=formData[f.key];if(f.type==='multi_select'){if(!v||!v.length)return false;}else if(f.type==='file')continue;else{if(!v||!String(v).trim())return false;}}}return true;};
+  const canSubmit=()=>{if(!tpl)return false;if(!formData["task_name"]||!formData["task_name"].trim())return false;for(const sec of tpl.sections){for(const f of sec.fields){if(!f.required)continue;const v=formData[f.key];if(f.type==='multi_select'){if(!v||!v.length)return false;}else if(f.type==='file')continue;else{if(!v||!String(v).trim())return false;}}}return true;};
   const handleSubmit=async()=>{if(!canSubmit())return;setSubmitting(true);try{const hasFiles=Object.values(files).some(f=>f);let res;if(hasFiles){const fd=new FormData();fd.append("template",selected);fd.append("data",JSON.stringify(formData));Object.entries(files).forEach(([k,f])=>{if(f)fd.append("file_"+k,f);});res=await api("POST","/api/tasks",fd);}else{res=await api("POST","/api/tasks",{template:selected,data:formData});}if(res.ok){setResult(res);if(isTG)tg.HapticFeedback?.notificationOccurred("success");}else{alert(res.error||"Error");}}catch(e){alert("Connection error");}setSubmitting(false);};
   const fullReset=()=>{setStep('team');setTeam(null);setSelected(null);setFormData({});setFiles({});setResult(null);onCreated();};
 
@@ -260,6 +260,10 @@ function CreateTask({teams,templates,onCreated}){
 
   return<div className="fade-in">
     <div className="section-title" style={{marginTop:0}}>{tpl?.name}</div>
+    {tpl&&<div className="field-group">
+      <div className="field-label">Название таски<span className="field-required">*</span></div>
+      <input type="text" placeholder="Короткое описание задачи" value={formData["task_name"]||''} onChange={e=>handleChange("task_name",e.target.value)}/>
+    </div>}
     {tpl&&tpl.sections.map((sec,si)=><div key={si}><div className="section-title">{sec.title}</div>
       {sec.fields.map(field=><div className="field-group" key={field.key}>
         <div className="field-label">{field.label}{field.required&&<span className="field-required">*</span>}</div>

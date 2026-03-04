@@ -239,9 +239,11 @@ def get_all_fields(template_key):
 
 
 def build_summary(template_key, data):
+    custom = data.get("task_name", "").strip()
+    if custom:
+        return custom
     tpl = TEMPLATES[template_key]
     geo = data.get("geo", "")
-    team = tpl.get("team", "")
     if template_key == "keitaro_integration":
         offer = data.get("offer_crm", "") or data.get("offer_kt", "")
         site_type = data.get("site_type", "")
