@@ -61,17 +61,6 @@ class JiraClient:
         }
         logger.info("Jira search JQL: %s", jql)
         async with aiohttp.ClientSession(auth=self.auth) as session:
-            # Debug: also try a simple query to verify API access
-            debug_jql = f'project in ({projects}) ORDER BY created DESC'
-            debug_params = {"jql": debug_jql, "maxResults": 1, "fields": "summary,customfield_10059"}
-            async with session.get(url, headers={"Accept": "application/json"}, params=debug_params) as dresp:
-                ddata = await dresp.json()
-                if ddata.get("issues"):
-                    bf = ddata["issues"][0].get("fields", {}).get("customfield_10059")
-                    logger.info("DEBUG: first issue buyer_tag field value=%s type=%s", bf, type(bf).__name__)
-                else:
-                    logger.info("DEBUG: no issues found even without filter, status=%s", dresp.status)
-
             async with session.get(url, headers={"Accept": "application/json"}, params=params) as resp:
                 data = await resp.json()
                 logger.info("Jira search response status=%s total=%s keys=%s raw=%s", resp.status, data.get("total", "N/A"), list(data.keys()), str(data)[:300])
