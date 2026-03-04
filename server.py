@@ -11,7 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from config import BOT_TOKEN, WEBAPP_URL, HOST, PORT, WEBHOOK_SECRET, STATUS_MAP, JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN
+from config import BOT_TOKEN, WEBAPP_URL, HOST, PORT, WEBHOOK_SECRET, STATUS_MAP, JIRA_URL
 from database import init_db, add_user, get_user_profile, save_user_profile
 from templates import TEMPLATES, TEAMS, build_summary, build_description
 from telegraph_client import publish_page as telegraph_publish
@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
 
 # ── Mock mode: if Jira creds are empty, skip Jira calls ─────────────
-MOCK_MODE = not JIRA_URL or not JIRA_API_TOKEN or JIRA_URL == "https://your-domain.atlassian.net"
+MOCK_MODE = not JIRA_URL or JIRA_URL == "https://your-domain.atlassian.net"
 if MOCK_MODE:
     logger.warning("=== MOCK MODE: Jira disabled ===")
 
@@ -92,8 +92,10 @@ async def api_get_profile(request):
     tg_id = user["id"]
     await add_user(tg_id, user.get("username"), user.get("first_name"))
     profile = await get_user_profile(tg_id)
-    if profile and profile.get("buyer_name") and profile.get("buyer_tag"):
-        return web.json_response({"registered": True, **profile})
+    if profile and profile.get("buyer_name") and profile.get("buyer_tag") and profile.get("jira_email") and profile.get("jira_token"):
+        safe_profile = {k: v for k, v in profile.items() if k != "jira_token"}
+        safe_profile["has_jira"] = True
+        return web.json_response({"registered": True, **safe_profile})
     return web.json_response({"registered": False, "tg_id": tg_id})
 
 
@@ -105,10 +107,12 @@ async def api_save_profile(request):
     body = await request.json()
     buyer_name = body.get("buyer_name", "").strip()
     buyer_tag = body.get("buyer_tag", "").strip()
-    if not buyer_name or not buyer_tag:
-        return web.json_response({"error": "Name and Buyer Tag required"}, status=400)
+    jira_email = body.get("jira_email", "").strip()
+    jira_token = body.get("jira_token", "").strip()
+    if not buyer_name or not buyer_tag or not jira_email or not jira_token:
+        return web.json_response({"error": "All fields required"}, status=400)
     await save_user_profile(
-        user["id"], buyer_name, buyer_tag,
+        user["id"], buyer_name, buyer_tag, jira_email, jira_token,
         user.get("username"), user.get("first_name"),
     )
     return web.json_response({"ok": True})
@@ -146,12 +150,19 @@ async def api_get_tasks(request):
         logger.warning("No buyer_tag for tg_id=%s", tg_id)
         return web.json_response([])
 
+    jira_email = profile.get("jira_email", "") if profile else ""
+    jira_token = profile.get("jira_token", "") if profile else ""
+    if not jira_email or not jira_token:
+        return web.json_response([])
+
     logger.info("Fetching tasks for buyer_tag='%s' tg_id=%s", buyer_tag, tg_id)
     try:
-        from jira_client import jira
-        issues = await jira.get_issues_by_buyer_tag(buyer_tag)
+        from jira_client import search_issues
+        res = await search_issues(jira_email, jira_token, buyer_tag)
+        if "error" in res:
+            return web.json_response({"error": res["error"]}, status=400)
         result = []
-        for issue in issues:
+        for issue in res.get("issues", []):
             status_name = issue["status"]
             si = STATUS_MAP.get(status_name, {"label": status_name, "color": "#6b7280", "order": 99})
             result.append({
@@ -247,16 +258,23 @@ async def api_create_task(request):
         })
     else:
         try:
-            from jira_client import jira
-            result = await jira.create_issue(
+            from jira_client import create_issue, attach_file
+            jira_email = profile.get("jira_email", "")
+            jira_token = profile.get("jira_token", "")
+            if not jira_email or not jira_token:
+                return web.json_response({"error": "Jira credentials missing"}, status=400)
+            result = await create_issue(
+                jira_email, jira_token,
                 summary=summary, description=description,
-                labels=["bot-created"], buyer_tag=buyer_tag,
+                buyer_tag=buyer_tag,
             )
+            if "error" in result:
+                return web.json_response({"error": result["error"]}, status=400)
             jira_key = result["key"]
 
             for fpath, fname in uploaded_files:
                 try:
-                    await attach_file_to_jira(jira_key, fpath, fname)
+                    await attach_file(jira_email, jira_token, jira_key, fpath, fname)
                 except Exception as e:
                     logger.error("File attach failed: %s", e)
                 finally:
@@ -270,21 +288,6 @@ async def api_create_task(request):
             })
         except Exception as e:
             return web.json_response({"error": str(e)}, status=500)
-
-
-async def attach_file_to_jira(issue_key, filepath, filename):
-    import aiohttp
-    from aiohttp import FormData
-    url = f"{JIRA_URL}/rest/api/3/issue/{issue_key}/attachments"
-    auth = aiohttp.BasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
-    headers = {"X-Atlassian-Token": "no-check"}
-    data = FormData()
-    data.add_field("file", open(filepath, "rb"), filename=filename)
-    async with aiohttp.ClientSession(auth=auth) as session:
-        async with session.post(url, headers=headers, data=data) as resp:
-            if resp.status >= 400:
-                text = await resp.text()
-                logger.error("Jira attach error %s: %s", resp.status, text)
 
 
 async def api_get_statuses(request):

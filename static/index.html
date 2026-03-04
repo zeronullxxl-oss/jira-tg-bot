@@ -166,12 +166,16 @@ function ThemeSwitch({current,onChange}){
 function Registration({onDone}){
   const[name,setName]=useState("");
   const[tag,setTag]=useState("");
+  const[jEmail,setJEmail]=useState("");
+  const[jToken,setJToken]=useState("");
   const[saving,setSaving]=useState(false);
+  const[error,setError]=useState("");
   const submit=async()=>{
-    if(!name.trim()||!tag.trim())return;
-    setSaving(true);
-    const res=await api("POST","/api/profile",{buyer_name:name.trim(),buyer_tag:tag.trim()});
-    if(res.ok)onDone({buyer_name:name.trim(),buyer_tag:tag.trim()});
+    if(!name.trim()||!tag.trim()||!jEmail.trim()||!jToken.trim())return;
+    setSaving(true);setError("");
+    const res=await api("POST","/api/profile",{buyer_name:name.trim(),buyer_tag:tag.trim(),jira_email:jEmail.trim(),jira_token:jToken.trim()});
+    if(res.ok||res.registered){onDone({buyer_name:name.trim(),buyer_tag:tag.trim()});}
+    else{setError(res.error||"Ошибка");}
     setSaving(false);
   };
   return<div className="reg-wrap fade-in">
@@ -186,7 +190,23 @@ function Registration({onDone}){
         <div className="field-label">Buyer Tag (как в Jira)<span className="field-required">*</span></div>
         <input type="text" placeholder="@pumba_junior" value={tag} onChange={e=>setTag(e.target.value)}/>
       </div>
-      <button className="btn btn-primary" disabled={!name.trim()||!tag.trim()||saving} onClick={submit}>
+      <div className="field-group">
+        <div className="field-label">Jira Email<span className="field-required">*</span></div>
+        <input type="text" placeholder="your@email.com" value={jEmail} onChange={e=>setJEmail(e.target.value)}/>
+      </div>
+      <div className="field-group">
+        <div className="field-label">Jira API Token<span className="field-required">*</span></div>
+        <input type="text" placeholder="ATATT3x..." value={jToken} onChange={e=>setJToken(e.target.value)} style={{fontFamily:'JetBrains Mono, monospace',fontSize:12}}/>
+        <div style={{fontSize:11,color:'var(--text2)',marginTop:4,lineHeight:1.5}}>
+          <span style={{color:'var(--accent)'}}>Как получить токен:</span><br/>
+          1. Открой <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style={{color:'var(--accent2)',wordBreak:'break-all'}}>id.atlassian.com/manage-profile/security/api-tokens</a><br/>
+          2. Нажми «Create API token»<br/>
+          3. Назови как угодно → Create<br/>
+          4. Скопируй токен и вставь сюда
+        </div>
+      </div>
+      {error&&<div style={{color:'var(--red)',fontSize:13,marginBottom:12}}>{error}</div>}
+      <button className="btn btn-primary" disabled={!name.trim()||!tag.trim()||!jEmail.trim()||!jToken.trim()||saving} onClick={submit}>
         {saving?<><span className="spinner"/>Сохраняю...</>:"Поехали!"}
       </button>
     </div>

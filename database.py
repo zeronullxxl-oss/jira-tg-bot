@@ -32,14 +32,16 @@ async def init_db():
                 full_name TEXT,
                 buyer_name TEXT,
                 buyer_tag TEXT,
+                jira_email TEXT,
+                jira_token TEXT,
                 registered_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        # migration
-        try:
-            await _pg_execute("ALTER TABLE users ADD COLUMN buyer_tag TEXT")
-        except Exception:
-            pass
+        for col in ["jira_email", "jira_token"]:
+            try:
+                await _pg_execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
+            except Exception:
+                pass
         logger.info("PostgreSQL ready")
     else:
         import aiosqlite
@@ -48,7 +50,7 @@ async def init_db():
             await db.execute(
                 "CREATE TABLE IF NOT EXISTS users ("
                 "tg_id INTEGER PRIMARY KEY, username TEXT, full_name TEXT, "
-                "buyer_name TEXT, buyer_tag TEXT, "
+                "buyer_name TEXT, buyer_tag TEXT, jira_email TEXT, jira_token TEXT, "
                 "registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
             )
             await db.commit()
@@ -72,7 +74,7 @@ async def add_user(tg_id, username=None, full_name=None):
 async def get_user_profile(tg_id):
     if USE_PG:
         return await _pg_execute(
-            "SELECT tg_id, username, full_name, buyer_name, buyer_tag FROM users WHERE tg_id = $1",
+            "SELECT tg_id, username, full_name, buyer_name, buyer_tag, jira_email, jira_token FROM users WHERE tg_id = $1",
             [tg_id], fetchone=True,
         )
     else:
@@ -80,25 +82,27 @@ async def get_user_profile(tg_id):
         db_path = os.path.join(os.path.dirname(__file__), "bot.db")
         async with aiosqlite.connect(db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("SELECT tg_id, username, full_name, buyer_name, buyer_tag FROM users WHERE tg_id = ?", (tg_id,))
+            cursor = await db.execute("SELECT tg_id, username, full_name, buyer_name, buyer_tag, jira_email, jira_token FROM users WHERE tg_id = ?", (tg_id,))
             row = await cursor.fetchone()
             return dict(row) if row else None
 
 
-async def save_user_profile(tg_id, buyer_name, buyer_tag, username=None, full_name=None):
+async def save_user_profile(tg_id, buyer_name, buyer_tag, jira_email, jira_token, username=None, full_name=None):
     if USE_PG:
         await _pg_execute(
-            "INSERT INTO users (tg_id, username, full_name, buyer_name, buyer_tag) VALUES ($1, $2, $3, $4, $5) "
-            "ON CONFLICT (tg_id) DO UPDATE SET buyer_name=$4, buyer_tag=$5, username=$2, full_name=$3",
-            [tg_id, username, full_name, buyer_name, buyer_tag],
+            "INSERT INTO users (tg_id, username, full_name, buyer_name, buyer_tag, jira_email, jira_token) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7) "
+            "ON CONFLICT (tg_id) DO UPDATE SET buyer_name=$4, buyer_tag=$5, jira_email=$6, jira_token=$7, username=$2, full_name=$3",
+            [tg_id, username, full_name, buyer_name, buyer_tag, jira_email, jira_token],
         )
     else:
         import aiosqlite
         db_path = os.path.join(os.path.dirname(__file__), "bot.db")
         async with aiosqlite.connect(db_path) as db:
             await db.execute(
-                "INSERT INTO users (tg_id, username, full_name, buyer_name, buyer_tag) VALUES (?, ?, ?, ?, ?) "
-                "ON CONFLICT(tg_id) DO UPDATE SET buyer_name=?, buyer_tag=?, username=?, full_name=?",
-                (tg_id, username, full_name, buyer_name, buyer_tag, buyer_name, buyer_tag, username, full_name),
+                "INSERT INTO users (tg_id, username, full_name, buyer_name, buyer_tag, jira_email, jira_token) VALUES (?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(tg_id) DO UPDATE SET buyer_name=?, buyer_tag=?, jira_email=?, jira_token=?, username=?, full_name=?",
+                (tg_id, username, full_name, buyer_name, buyer_tag, jira_email, jira_token,
+                 buyer_name, buyer_tag, jira_email, jira_token, username, full_name),
             )
             await db.commit()
