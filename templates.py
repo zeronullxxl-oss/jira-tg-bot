@@ -61,7 +61,7 @@ TEMPLATES = {
                 "fields": [
                     {"key": "deadline", "label": "Дедлайн", "type": "text", "required": False, "placeholder": "С некст недели, завтра, 15.03..."},
                     {"key": "priority", "label": "Приоритет", "type": "select", "required": True,
-                     "options": ["Очень срочно", "Стандартная таска"]},
+                     "options": ["Обычная", "Срочная", "Очень срочная"]},
                 ],
             },
             {
@@ -91,7 +91,8 @@ TEMPLATES = {
                     {"key": "vertical", "label": "Вертикаль", "type": "select", "required": True,
                      "options": ["Инвест", "Чардж"]},
                     {"key": "priority", "label": "Приоритет", "type": "select", "required": True,
-                     "options": ["Очень срочно", "Стандартная таска"]},
+                     "options": ["Обычная", "Срочная", "Очень срочная"]},
+                    {"key": "deadline", "label": "Дедлайн", "type": "text", "required": False, "placeholder": "завтра, 15.03, С некст недели..."},
                 ],
             },
             {
@@ -165,7 +166,8 @@ TEMPLATES = {
                     {"key": "vertical", "label": "Вертикаль", "type": "select", "required": True,
                      "options": ["Инвест", "Чардж"]},
                     {"key": "priority", "label": "Приоритет", "type": "select", "required": True,
-                     "options": ["Очень срочно", "Стандартная таска"]},
+                     "options": ["Обычная", "Срочная", "Очень срочная"]},
+                    {"key": "deadline", "label": "Дедлайн", "type": "text", "required": False, "placeholder": "завтра, 15.03, С некст недели..."},
                 ],
             },
             {
