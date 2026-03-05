@@ -13,7 +13,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, WEBAPP_URL, HOST, PORT, WEBHOOK_SECRET, STATUS_MAP, JIRA_URL
 from database import init_db, add_user, get_user_profile, save_user_profile, DATABASE_URL, USE_PG
-from templates import TEMPLATES, TEAMS, build_summary, build_description
+from templates import TEMPLATES, TEAMS, build_summary, build_description, build_adf_description
 from telegraph_client import publish_page as telegraph_publish
 
 logging.basicConfig(level=logging.INFO)
@@ -228,6 +228,7 @@ async def api_create_task(request):
     buyer_tag = profile.get("buyer_tag", "") if profile else ""
     summary = build_summary(template_key, data)
     description = build_description(template_key, data)
+    adf_nodes = build_adf_description(template_key, data, buyer_name=profile.get("buyer_name", ""), buyer_tag=buyer_tag)
     description = f"Buyer: {buyer_name} ({buyer_tag})\n{description}"
 
     # Auto-publish telegraph text if provided
@@ -267,6 +268,8 @@ async def api_create_task(request):
                 jira_email, jira_token,
                 summary=summary, description=description,
                 buyer_tag=buyer_tag,
+                project_key=TEAMS.get(TEMPLATES[template_key]["team"], {}).get("project"),
+                adf_content=adf_nodes,
             )
             if "error" in result:
                 return web.json_response({"error": result["error"]}, status=400)

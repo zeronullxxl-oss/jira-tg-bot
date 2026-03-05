@@ -52,22 +52,27 @@ async def search_issues(jira_email, jira_token, buyer_tag):
             return {"issues": issues}
 
 
-async def create_issue(jira_email, jira_token, summary, description, buyer_tag=None):
+async def create_issue(jira_email, jira_token, summary, description, buyer_tag=None, project_key=None, adf_content=None):
     """Create issue using user's own Jira credentials."""
     base = JIRA_URL.rstrip("/")
     url = f"{base}/rest/api/3/issue"
     auth = aiohttp.BasicAuth(jira_email, jira_token)
-    adf_content = []
-    for line in description.split("\n"):
-        adf_content.append({
-            "type": "paragraph",
-            "content": [{"type": "text", "text": line}] if line.strip() else [],
-        })
+    proj = project_key or JIRA_PROJECT_KEYS[0]
+    if adf_content:
+        doc = {"version": 1, "type": "doc", "content": adf_content}
+    else:
+        nodes = []
+        for line in description.split("\n"):
+            nodes.append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": line}] if line.strip() else [],
+            })
+        doc = {"version": 1, "type": "doc", "content": nodes}
     fields = {
-        "project": {"key": JIRA_PROJECT_KEYS[0]},
+        "project": {"key": proj},
         "summary": summary,
         "issuetype": {"name": "Story"},
-        "description": {"version": 1, "type": "doc", "content": adf_content},
+        "description": doc,
         "labels": ["bot-created"],
     }
     if buyer_tag:

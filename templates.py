@@ -1,12 +1,12 @@
 TEAMS = {
-    "tech": {"name": "Тех отдел", "emoji": "\u2699\ufe0f"},
-    "design": {"name": "Диз отдел", "emoji": "\U0001f3a8"},
+    "tech": {"name": "Тех отдел", "emoji": "\u2699\ufe0f", "project": "FLOW"},
+    "design": {"name": "Диз отдел", "emoji": "\U0001f3a8", "project": "DESIGN"},
 }
 
 TEMPLATES = {
     "keitaro_integration": {
         "team": "tech",
-        "name": "Интеграция ленда",
+        "name": "Мех интегра Прилендов и лендов",
         "description": "Создание / интеграция ленда и преленда",
         "sections": [
             {
@@ -22,7 +22,7 @@ TEMPLATES = {
                     {"key": "task_type", "label": "Тип задачи", "type": "select", "required": True,
                      "options": [
                          "Сделать ленд с нуля (фигма)",
-                         "Сделать с нуля или выкачать (скрины/идеи)",
+                         "Сделать с нуля или выкачать (скрины/идеи, референсы)",
                          "Переделать оффер существующий (ссылка в кт)",
                      ]},
                 ],
@@ -37,13 +37,14 @@ TEMPLATES = {
             {
                 "title": "Данные интеграции",
                 "fields": [
-                    {"key": "offer_crm", "label": "Название оффера в CRM", "type": "text", "required": True, "placeholder": ""},
-                    {"key": "offer_kt", "label": "Название оффера в КТ", "type": "text", "required": True, "placeholder": ""},
-                    {"key": "geo", "label": "Гео", "type": "text", "required": True, "placeholder": "MY, NO, JP..."},
-                    {"key": "lang", "label": "Язык", "type": "text", "required": True, "placeholder": "EN, RU..."},
+                    {"key": "offer_crm", "label": "Название оффера в CRM", "type": "text", "required": True, "placeholder": "Lend(MEX_GPT-Trade_V1)"},
+                    {"key": "offer_kt", "label": "Название оффера в КТ", "type": "text", "required": True, "placeholder": "Lend(MEX_GPT-Trade_V1)"},
+                    {"key": "preland_mapping", "label": "Прелендинги (маппинг)", "type": "textarea", "required": False, "placeholder": "1.preland-economia = MEX_Economic_V1\n2.preland-iran = MEX_Iran_V1\n..."},
+                    {"key": "geo", "label": "Гео", "type": "text", "required": True, "placeholder": "MEX, MY, JP..."},
+                    {"key": "lang", "label": "Язык", "type": "text", "required": True, "placeholder": "ES, EN, RU..."},
                     {"key": "vertical", "label": "Вертикаль", "type": "text", "required": False, "placeholder": "инвест"},
                     {"key": "user_id_crm", "label": "Юзер ID в CRM", "type": "text", "required": False, "placeholder": ""},
-                    {"key": "thankyou_id", "label": "Id спасибо страницы", "type": "text", "required": False, "placeholder": "если есть"},
+                    {"key": "thankyou_id", "label": "Id спасибо страницы (если есть)", "type": "text", "required": False, "placeholder": "В архивк"},
                 ],
             },
             {
@@ -51,16 +52,30 @@ TEMPLATES = {
                 "fields": [
                     {"key": "reference", "label": "Референс", "type": "text", "required": False, "placeholder": "ссылка на референс"},
                     {"key": "figma_url", "label": "Figma / дизайн", "type": "text", "required": False, "placeholder": "ссылка на макет"},
-                    {"key": "assets", "label": "Архив ассетов", "type": "file", "required": False, "placeholder": "ZIP или ссылка"},
+                    {"key": "assets_url", "label": "Архив ассетов", "type": "text", "required": False, "placeholder": "ZIP, ссылка на кейтаро"},
                     {"key": "telegraph_text", "label": "Телеграф", "type": "textarea", "required": False, "placeholder": "Напиши текст — опубликуется на telegra.ph автоматом"},
                 ],
             },
             {
                 "title": "Сроки и приоритет",
                 "fields": [
-                    {"key": "deadline", "label": "Дедлайн", "type": "text", "required": False, "placeholder": "завтра, 15.03, ASAP..."},
+                    {"key": "deadline", "label": "Дедлайн", "type": "text", "required": False, "placeholder": "С некст недели, завтра, 15.03..."},
                     {"key": "priority", "label": "Приоритет", "type": "select", "required": True,
                      "options": ["Очень срочно", "Стандартная таска"]},
+                ],
+            },
+            {
+                "title": "Суть задачи",
+                "fields": [
+                    {"key": "task_description", "label": "Описание", "type": "textarea", "required": False, "placeholder": "Подробно опиши что нужно сделать..."},
+                ],
+            },
+            {
+                "title": "Ассеты",
+                "fields": [
+                    {"key": "assets_needed", "label": "Нужные материалы", "type": "multi_select", "required": False,
+                     "options": ["Изображения", "Видео", "Логотипы", "Иконки"]},
+                    {"key": "assets_file", "label": "Файлы / материалы", "type": "file", "required": False},
                 ],
             },
         ],
@@ -94,8 +109,8 @@ TEMPLATES = {
                 "title": "Крео",
                 "fields": [
                     {"key": "creo_type", "label": "Тип крео", "type": "select", "required": True,
-                     "options": ["Универсальное без оффера", "С оффером"]},
-                    {"key": "offer_url", "label": "Ссылка на оффер", "type": "text", "required": False, "placeholder": "если с оффером"},
+                     "options": ["Универсальное без оффера", "С оффером ( Вставить ссылку на Офер )"]},
+                    {"key": "offer_url", "label": "Ссылка на оффер", "type": "text", "required": False, "placeholder": "вставить ссылку на оффер"},
                 ],
             },
             {
@@ -114,7 +129,8 @@ TEMPLATES = {
             {
                 "title": "Персонаж",
                 "fields": [
-                    {"key": "character", "label": "Описание персонажа", "type": "textarea", "required": False, "placeholder": "Какой персонаж нужен для крео..."},
+                    {"key": "character", "label": "Описать какой персонаж нужен для крео", "type": "textarea", "required": False, "placeholder": "Какой персонаж нужен..."},
+                    {"key": "celeb", "label": "Селеба дать описание", "type": "textarea", "required": False, "placeholder": "Описание селебы..."},
                 ],
             },
             {
@@ -167,8 +183,8 @@ TEMPLATES = {
                 "title": "Крео",
                 "fields": [
                     {"key": "creo_type", "label": "Тип крео", "type": "select", "required": True,
-                     "options": ["Универсальное без оффера", "С оффером"]},
-                    {"key": "offer_url", "label": "Ссылка на оффер", "type": "text", "required": False, "placeholder": "если с оффером"},
+                     "options": ["Универсальное без оффера", "С оффером ( Вставить ссылку на Офер )"]},
+                    {"key": "offer_url", "label": "Ссылка на оффер", "type": "text", "required": False, "placeholder": "вставить ссылку на оффер"},
                 ],
             },
             {
@@ -256,6 +272,7 @@ def build_summary(template_key, data):
 
 
 def build_description(template_key, data):
+    """Build plain text fallback."""
     tpl = TEMPLATES[template_key]
     lines = [f"Team: {tpl.get('team', '')}", f"Template: {tpl['name']}", ""]
     for section in tpl["sections"]:
@@ -270,3 +287,149 @@ def build_description(template_key, data):
                 lines.append(f"{label}: {value}")
         lines.append("")
     return "\n".join(lines)
+
+
+def _adf_text(text, marks=None):
+    node = {"type": "text", "text": str(text)}
+    if marks:
+        node["marks"] = marks
+    return node
+
+
+def _adf_bold(text):
+    return _adf_text(text, [{"type": "strong"}])
+
+
+def _adf_paragraph(*content):
+    return {"type": "paragraph", "content": list(content)}
+
+
+def _adf_heading(text, level=3):
+    return {"type": "heading", "attrs": {"level": level}, "content": [_adf_text(text)]}
+
+
+def _adf_divider():
+    return {"type": "rule"}
+
+
+def _adf_panel(panel_type, content_nodes):
+    """panel_type: info, note, warning, success, error"""
+    return {
+        "type": "panel",
+        "attrs": {"panelType": panel_type},
+        "content": content_nodes,
+    }
+
+
+def _adf_table(rows):
+    """rows = list of lists. First row = header."""
+    table_rows = []
+    for i, row in enumerate(rows):
+        cell_type = "tableHeader" if i == 0 else "tableCell"
+        cells = []
+        for cell in row:
+            if isinstance(cell, str):
+                cells.append({"type": cell_type, "content": [_adf_paragraph(_adf_text(cell))]})
+            else:
+                cells.append({"type": cell_type, "content": [_adf_paragraph(cell)]})
+        table_rows.append({"type": "tableRow", "content": cells})
+    return {"type": "table", "attrs": {"isNumberColumnEnabled": False, "layout": "default"}, "content": table_rows}
+
+
+def _adf_status(text, color="neutral"):
+    """color: neutral, purple, blue, red, yellow, green"""
+    return {
+        "type": "status",
+        "attrs": {"text": text, "color": color, "style": ""},
+    }
+
+
+def _adf_task_list(items, checked_items):
+    """Render as Jira taskList with checkboxes."""
+    tasks = []
+    for item in items:
+        is_checked = item in checked_items
+        tasks.append({
+            "type": "taskItem",
+            "attrs": {"localId": item, "state": "DONE" if is_checked else "TODO"},
+            "content": [{"type": "text", "text": item}],
+        })
+    return {"type": "taskList", "attrs": {"localId": "list"}, "content": tasks}
+
+
+def _adf_bullet_list(items):
+    """Render as bullet list."""
+    nodes = []
+    for item in items:
+        nodes.append({
+            "type": "listItem",
+            "content": [_adf_paragraph(_adf_text(str(item)))],
+        })
+    return {"type": "bulletList", "content": nodes}
+
+
+def _adf_code_block(text):
+    """Render as code block for preland mappings etc."""
+    return {
+        "type": "codeBlock",
+        "attrs": {},
+        "content": [{"type": "text", "text": text}],
+    }
+
+
+def build_adf_description(template_key, data, buyer_name="", buyer_tag=""):
+    """Build rich ADF description for Jira."""
+    tpl = TEMPLATES[template_key]
+    team = TEAMS.get(tpl.get("team", ""), {})
+    nodes = []
+
+    # Each section
+    for section in tpl["sections"]:
+        filled_fields = []
+        for field in section["fields"]:
+            value = data.get(field["key"], "")
+            if field["type"] == "file":
+                continue
+            if not value:
+                continue
+            filled_fields.append(field)
+
+        if not filled_fields:
+            continue
+
+        # Section heading
+        nodes.append(_adf_heading(section["title"], 3))
+
+        for field in filled_fields:
+            value = data.get(field["key"], "")
+
+            # Multi-select → checkbox list
+            if field["type"] == "multi_select":
+                all_options = field.get("options", [])
+                selected = value if isinstance(value, list) else [value]
+                nodes.append(_adf_task_list(all_options, selected))
+
+            # Select → checkbox list (single selection)
+            elif field["type"] == "select":
+                all_options = field.get("options", [])
+                nodes.append(_adf_task_list(all_options, [value]))
+
+            # Textarea with multiline → code block for mappings, normal for descriptions
+            elif field["type"] == "textarea" and field["key"] == "preland_mapping":
+                nodes.append(_adf_paragraph(_adf_bold(f"{field['label']}:")))
+                nodes.append(_adf_code_block(str(value)))
+
+            elif field["type"] == "textarea":
+                nodes.append(_adf_paragraph(_adf_bold(f"{field['label']}:")))
+                for line in str(value).split("\n"):
+                    nodes.append(_adf_paragraph(_adf_text(line)))
+
+            # Text field → label: value
+            else:
+                nodes.append(_adf_paragraph(
+                    _adf_text(f"{field['label']}: {value}"),
+                ))
+
+        nodes.append(_adf_divider())
+
+    return nodes
