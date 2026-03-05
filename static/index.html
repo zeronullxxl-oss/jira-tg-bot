@@ -225,7 +225,7 @@ function Registration({onDone}){
 function TaskCard({t,mockMode,onStatusChange}){
   const[moving,setMoving]=useState(false);
   const canMove=t.status==="To Do"||t.status==="Ready to Buyer Review";
-  const moveLabel=t.status==="To Do"?"→ Ready for Dev":"→ Published";
+  const moveLabel=t.status==="To Do"?"Перейти к выполнению":"Publish";
   const moveClass=t.status==="To Do"?"ready":"publish";
   const doMove=async(e)=>{
     e.stopPropagation();
@@ -250,7 +250,6 @@ function TaskCard({t,mockMode,onStatusChange}){
       <span>{new Date(t.created_at).toLocaleDateString()}</span>
       {canMove&&<button className={`task-move-btn ${moveClass}`} disabled={moving} onClick={doMove}>{moving?"...":moveLabel}</button>}
     </div>
-    {mockMode&&<div className="task-actions">{ALL_STATUSES.filter(s=>s!==t.status).map(s=><button key={s} className="task-action-btn" onClick={e=>{e.stopPropagation();onStatusChange(t.jira_key,s);}}>{s}</button>)}</div>}
   </div>;
 }
 
