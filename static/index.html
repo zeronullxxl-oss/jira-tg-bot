@@ -114,6 +114,8 @@
   .loading-center{display:flex;justify-content:center;align-items:center;padding:60px 0;color:var(--text2);font-size:13px;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
   .fade-in{animation:fadeIn .3s ease forwards;}
+  .btn-logout{background:transparent;border:1px solid var(--border);color:var(--text2);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .15s;}
+  .btn-logout:hover{border-color:var(--red);color:var(--red);}
   .reg-wrap{padding:40px 0;text-align:center;}
   .reg-wrap h2{font-size:22px;margin-bottom:8px;}
   .reg-wrap p{color:var(--text2);font-size:14px;margin-bottom:32px;}
@@ -324,6 +326,12 @@ function App(){
     fetch("/api/tasks/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})}).then(r=>{if(r.status!==403)setMockMode(true);});
   },[]);
 
+  const handleLogout=async()=>{
+    if(!confirm("Выйти из аккаунта? Нужно будет заново ввести данные."))return;
+    await api("POST","/api/logout");
+    setProfile(null);setTasks([]);
+  };
+
   if(loading)return<div className="app"><div className="loading-center"><span className="spinner"/>Loading...</div></div>;
 
   if(!profile)return<div className="app"><Registration onDone={p=>setProfile(p)}/></div>;
@@ -334,7 +342,7 @@ function App(){
         <h1>Task Manager 13Buyers{mockMode&&<span className="mock-badge">dev</span>}</h1>
         <ThemeSwitch current={theme} onChange={setTheme}/>
       </div>
-      <div className="header-sub">{profile.buyer_name} {profile.buyer_tag&&<span style={{color:'var(--accent2)'}}>{profile.buyer_tag}</span>} // {tasks.length} tasks</div>
+      <div className="header-sub">{profile.buyer_name} {profile.buyer_tag&&<span style={{color:'var(--accent2)'}}>{profile.buyer_tag}</span>} // {tasks.length} tasks <button className="btn-logout" onClick={handleLogout}>Выйти</button></div>
     </div>
     <div className="tabs">
       <button className={`tab ${tab==='tasks'?'active':''}`} onClick={()=>{setTab('tasks');loadTasks();}}>Мои таски</button>

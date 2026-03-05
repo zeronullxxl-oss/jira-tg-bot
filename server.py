@@ -12,7 +12,7 @@ from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, WEBAPP_URL, HOST, PORT, WEBHOOK_SECRET, STATUS_MAP, JIRA_URL
-from database import init_db, add_user, get_user_profile, save_user_profile
+from database import init_db, add_user, get_user_profile, save_user_profile, DATABASE_URL, USE_PG
 from templates import TEMPLATES, TEAMS, build_summary, build_description
 from telegraph_client import publish_page as telegraph_publish
 
@@ -294,6 +294,36 @@ async def api_get_statuses(request):
     return web.json_response(STATUS_MAP)
 
 
+async def api_logout(request):
+    """Reset user profile — back to registration."""
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    user = validate_init_data(init_data)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    tg_id = user["id"]
+    if USE_PG:
+        import asyncpg
+        conn = await asyncpg.connect(DATABASE_URL)
+        try:
+            await conn.execute(
+                "UPDATE users SET buyer_name=NULL, buyer_tag=NULL, jira_email=NULL, jira_token=NULL WHERE tg_id=$1",
+                tg_id,
+            )
+        finally:
+            await conn.close()
+    else:
+        import aiosqlite
+        db_path = os.path.join(os.path.dirname(__file__), "bot.db")
+        async with aiosqlite.connect(db_path) as db:
+            await db.execute(
+                "UPDATE users SET buyer_name=NULL, buyer_tag=NULL, jira_email=NULL, jira_token=NULL WHERE tg_id=?",
+                (tg_id,),
+            )
+            await db.commit()
+    logger.info("User %s logged out", tg_id)
+    return web.json_response({"ok": True})
+
+
 async def api_update_status(request):
     """Manual status update for mock mode only."""
     if not MOCK_MODE:
@@ -375,6 +405,7 @@ async def main():
     app.router.add_post("/api/tasks", api_create_task)
     app.router.add_get("/api/statuses", api_get_statuses)
     app.router.add_post("/api/tasks/status", api_update_status)
+    app.router.add_post("/api/logout", api_logout)
     app.router.add_post("/webhook/jira", jira_webhook)
 
     runner = web.AppRunner(app)
