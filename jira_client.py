@@ -1,5 +1,4 @@
 import aiohttp
-import json
 import logging
 
 from config import JIRA_URL, JIRA_PROJECT_KEYS
@@ -113,6 +112,10 @@ async def do_transition(jira_email, jira_token, issue_key, transition_id):
             text = await resp.text()
             logger.error("Transition error %s: %s", resp.status, text)
             return {"error": f"Transition failed: {resp.status}"}
+
+
+async def attach_file(jira_email, jira_token, issue_key, filepath, filename):
+    """Attach file to issue."""
     base = JIRA_URL.rstrip("/")
     url = f"{base}/rest/api/3/issue/{issue_key}/attachments"
     auth = aiohttp.BasicAuth(jira_email, jira_token)

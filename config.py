@@ -7,8 +7,6 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://localhost:8080")
 
 JIRA_URL = os.getenv("JIRA_URL")
-JIRA_EMAIL = os.getenv("JIRA_EMAIL")
-JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "PROJ")
 JIRA_PROJECT_KEYS = [k.strip() for k in os.getenv("JIRA_PROJECT_KEYS", JIRA_PROJECT_KEY).split(",")]
 
