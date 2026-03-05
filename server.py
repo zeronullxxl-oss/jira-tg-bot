@@ -328,19 +328,63 @@ async def api_logout(request):
 
 
 async def api_update_status(request):
-    """Manual status update for mock mode only."""
-    if not MOCK_MODE:
-        return web.json_response({"error": "Only in mock mode"}, status=403)
+    """Move task to a new status via Jira transitions."""
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    user = validate_init_data(init_data)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    tg_id = user["id"]
+    profile = await get_user_profile(tg_id)
+    jira_email = profile.get("jira_email", "") if profile else ""
+    jira_token = profile.get("jira_token", "") if profile else ""
+    if not jira_email or not jira_token:
+        return web.json_response({"error": "Jira credentials missing"}, status=400)
+
     body = await request.json()
-    jira_key = body.get("jira_key")
-    new_status = body.get("status")
-    if not jira_key or not new_status:
-        return web.json_response({"error": "Missing jira_key or status"}, status=400)
-    for t in _mock_tasks:
-        if t["jira_key"] == jira_key:
-            t["status"] = new_status
-            break
+    issue_key = body.get("jira_key")
+    transition_id = body.get("transition_id")
+    if not issue_key or not transition_id:
+        return web.json_response({"error": "Missing jira_key or transition_id"}, status=400)
+
+    from jira_client import do_transition
+    result = await do_transition(jira_email, jira_token, issue_key, transition_id)
+    if "error" in result:
+        return web.json_response(result, status=400)
+    logger.info("Transition %s on %s by tg_id=%s", transition_id, issue_key, tg_id)
     return web.json_response({"ok": True})
+
+
+async def api_get_transitions(request):
+    """Get available transitions for a task."""
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    user = validate_init_data(init_data)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    tg_id = user["id"]
+    profile = await get_user_profile(tg_id)
+    jira_email = profile.get("jira_email", "") if profile else ""
+    jira_token = profile.get("jira_token", "") if profile else ""
+    if not jira_email or not jira_token:
+        return web.json_response({"error": "Jira credentials missing"}, status=400)
+
+    issue_key = request.query.get("key", "")
+    if not issue_key:
+        return web.json_response({"error": "Missing key"}, status=400)
+
+    from jira_client import get_transitions
+    transitions = await get_transitions(jira_email, jira_token, issue_key)
+
+    # Filter: only allowed buyer transitions
+    ALLOWED_MOVES = {
+        "To Do": ["Ready for Development"],
+        "Ready to Buyer Review": ["Published"],
+    }
+    # Get current status from query param
+    current_status = request.query.get("status", "")
+    allowed_targets = ALLOWED_MOVES.get(current_status, [])
+    filtered = [t for t in transitions if t["to"] in allowed_targets] if allowed_targets else []
+
+    return web.json_response(filtered)
 
 
 async def jira_webhook(request):
@@ -408,6 +452,7 @@ async def main():
     app.router.add_post("/api/tasks", api_create_task)
     app.router.add_get("/api/statuses", api_get_statuses)
     app.router.add_post("/api/tasks/status", api_update_status)
+    app.router.add_get("/api/tasks/transitions", api_get_transitions)
     app.router.add_post("/api/logout", api_logout)
     app.router.add_post("/webhook/jira", jira_webhook)
 

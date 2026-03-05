@@ -6,7 +6,7 @@ TEAMS = {
 TEMPLATES = {
     "keitaro_integration": {
         "team": "tech",
-        "name": "Мех интегра Прилендов и лендов",
+        "name": "Интегра лендов/прилендов",
         "description": "Создание / интеграция ленда и преленда",
         "sections": [
             {
@@ -39,7 +39,6 @@ TEMPLATES = {
                 "fields": [
                     {"key": "offer_crm", "label": "Название оффера в CRM", "type": "text", "required": True, "placeholder": "Lend(MEX_GPT-Trade_V1)"},
                     {"key": "offer_kt", "label": "Название оффера в КТ", "type": "text", "required": True, "placeholder": "Lend(MEX_GPT-Trade_V1)"},
-                    {"key": "preland_mapping", "label": "Прелендинги (маппинг)", "type": "textarea", "required": False, "placeholder": "1.preland-economia = MEX_Economic_V1\n2.preland-iran = MEX_Iran_V1\n..."},
                     {"key": "geo", "label": "Гео", "type": "text", "required": True, "placeholder": "MEX, MY, JP..."},
                     {"key": "lang", "label": "Язык", "type": "text", "required": True, "placeholder": "ES, EN, RU..."},
                     {"key": "vertical", "label": "Вертикаль", "type": "text", "required": False, "placeholder": "инвест"},

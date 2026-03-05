@@ -88,7 +88,31 @@ async def create_issue(jira_email, jira_token, summary, description, buyer_tag=N
             return data
 
 
-async def attach_file(jira_email, jira_token, issue_key, filepath, filename):
+async def get_transitions(jira_email, jira_token, issue_key):
+    """Get available transitions for an issue."""
+    base = JIRA_URL.rstrip("/")
+    url = f"{base}/rest/api/3/issue/{issue_key}/transitions"
+    auth = aiohttp.BasicAuth(jira_email, jira_token)
+    async with aiohttp.ClientSession(auth=auth) as session:
+        async with session.get(url, headers={"Accept": "application/json"}) as resp:
+            if resp.status >= 400:
+                return []
+            data = await resp.json()
+            return [{"id": t["id"], "name": t["name"], "to": t.get("to", {}).get("name", "")} for t in data.get("transitions", [])]
+
+
+async def do_transition(jira_email, jira_token, issue_key, transition_id):
+    """Execute a transition on an issue."""
+    base = JIRA_URL.rstrip("/")
+    url = f"{base}/rest/api/3/issue/{issue_key}/transitions"
+    auth = aiohttp.BasicAuth(jira_email, jira_token)
+    async with aiohttp.ClientSession(auth=auth) as session:
+        async with session.post(url, headers={"Content-Type": "application/json"}, json={"transition": {"id": transition_id}}) as resp:
+            if resp.status == 204:
+                return {"ok": True}
+            text = await resp.text()
+            logger.error("Transition error %s: %s", resp.status, text)
+            return {"error": f"Transition failed: {resp.status}"}
     base = JIRA_URL.rstrip("/")
     url = f"{base}/rest/api/3/issue/{issue_key}/attachments"
     auth = aiohttp.BasicAuth(jira_email, jira_token)

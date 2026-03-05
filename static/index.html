@@ -67,6 +67,12 @@
   .status-count{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2);background:var(--bg3);padding:2px 6px;border-radius:4px;}
   .task-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;transition:all .15s;cursor:pointer;position:relative;overflow:hidden;}
   .task-card:active{transform:scale(.98);background:var(--bg3);}
+  .task-move-btn{padding:4px 10px;border-radius:5px;font-size:10px;font-weight:600;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .15s;text-transform:uppercase;letter-spacing:.3px;}
+  .task-move-btn.ready{background:#3b82f620;color:#3b82f6;border:1px solid #3b82f630;}
+  .task-move-btn.ready:hover{background:#3b82f640;}
+  .task-move-btn.publish{background:#22c55e20;color:#22c55e;border:1px solid #22c55e30;}
+  .task-move-btn.publish:hover{background:#22c55e40;}
+  .task-move-btn:disabled{opacity:.5;cursor:wait;}
   .task-key{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);font-weight:600;margin-bottom:4px;}
   .task-summary{font-size:14px;font-weight:500;line-height:1.4;margin-bottom:8px;}
   .task-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;flex-wrap:wrap;}
@@ -215,6 +221,39 @@ function Registration({onDone}){
   </div>;
 }
 
+/* ── Task Card with Move Button ────────────── */
+function TaskCard({t,mockMode,onStatusChange}){
+  const[moving,setMoving]=useState(false);
+  const canMove=t.status==="To Do"||t.status==="Ready to Buyer Review";
+  const moveLabel=t.status==="To Do"?"→ Ready for Dev":"→ Published";
+  const moveClass=t.status==="To Do"?"ready":"publish";
+  const doMove=async(e)=>{
+    e.stopPropagation();
+    setMoving(true);
+    try{
+      const tr=await api("GET",`/api/tasks/transitions?key=${t.jira_key}&status=${encodeURIComponent(t.status)}`);
+      if(tr&&tr.length>0){
+        const res=await api("POST","/api/tasks/status",{jira_key:t.jira_key,transition_id:tr[0].id});
+        if(res.ok){if(isTG)tg.HapticFeedback?.notificationOccurred("success");window.location.reload();}
+        else{alert(res.error||"Ошибка");if(isTG)tg.HapticFeedback?.notificationOccurred("error");}
+      }else{alert("Нет доступных переходов");if(isTG)tg.HapticFeedback?.notificationOccurred("error");}
+    }catch(err){alert("Ошибка: "+err.message);}
+    setMoving(false);
+  };
+  return<div className="task-card" onClick={()=>{if(isTG&&t.jira_url!=='#')tg.openLink(t.jira_url);}}>
+    <div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:t.status_color}}/>
+    <div className="task-key">{t.jira_key}</div><div className="task-summary">{t.summary}</div>
+    <div className="task-meta">
+      <span className="task-status-badge" style={{background:t.status_color+'20',color:t.status_color}}>{t.status_label}</span>
+      {t.project&&<span style={{background:'var(--bg3)',padding:'2px 6px',borderRadius:4,fontSize:10}}>{t.project}</span>}
+      {t.priority&&<span style={{fontSize:10,color:'var(--text2)'}}>{t.priority}</span>}
+      <span>{new Date(t.created_at).toLocaleDateString()}</span>
+      {canMove&&<button className={`task-move-btn ${moveClass}`} disabled={moving} onClick={doMove}>{moving?"...":moveLabel}</button>}
+    </div>
+    {mockMode&&<div className="task-actions">{ALL_STATUSES.filter(s=>s!==t.status).map(s=><button key={s} className="task-action-btn" onClick={e=>{e.stopPropagation();onStatusChange(t.jira_key,s);}}>{s}</button>)}</div>}
+  </div>;
+}
+
 /* ── Task List ─────────────────────────────── */
 function TaskList({tasks,loading,onStatusChange,mockMode}){
   if(loading)return<div className="loading-center"><span className="spinner"/>Loading...</div>;
@@ -224,13 +263,7 @@ function TaskList({tasks,loading,onStatusChange,mockMode}){
   return<div>{Object.keys(grouped).sort((a,b)=>(orders[a]||99)-(orders[b]||99)).map((status,i)=>
     <div className="status-group fade-in" key={status} style={{animationDelay:`${i*0.05}s`}}>
       <div className="status-header"><div className="status-dot" style={{background:grouped[status][0]?.status_color}}/><span className="status-name">{grouped[status][0]?.status_label}</span><span className="status-count">{grouped[status].length}</span></div>
-      {grouped[status].map(t=>
-        <div className="task-card" key={t.jira_key} onClick={()=>{if(isTG&&t.jira_url!=='#')tg.openLink(t.jira_url);}}>
-          <div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:t.status_color}}/>
-          <div className="task-key">{t.jira_key}</div><div className="task-summary">{t.summary}</div>
-          <div className="task-meta"><span className="task-status-badge" style={{background:t.status_color+'20',color:t.status_color}}>{t.status_label}</span>{t.project&&<span style={{background:'var(--bg3)',padding:'2px 6px',borderRadius:4,fontSize:10}}>{t.project}</span>}{t.priority&&<span style={{fontSize:10,color:'var(--text2)'}}>{t.priority}</span>}<span>{new Date(t.created_at).toLocaleDateString()}</span></div>
-          {mockMode&&<div className="task-actions">{ALL_STATUSES.filter(s=>s!==t.status).map(s=><button key={s} className="task-action-btn" onClick={e=>{e.stopPropagation();onStatusChange(t.jira_key,s);}}>{s}</button>)}</div>}
-        </div>)}
+      {grouped[status].map(t=><TaskCard key={t.jira_key} t={t} mockMode={mockMode} onStatusChange={onStatusChange}/>)}
     </div>)}</div>;
 }
 
